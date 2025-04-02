@@ -1,0 +1,22 @@
+﻿using GCGRA.UPDB.Application.Features.Blob.Commands;
+using GCGRA.UPDB.Infrastructure.Services;
+using MediatR;
+
+namespace GCGRA.UPDB.Application.Features.Blob.Handlers
+{
+    public class UploadJsonToBlobCommandHandler : IRequestHandler<UploadJsonToBlobCommand, string>
+    {
+        private readonly BlobStorageService _blobStorageService;
+
+        public UploadJsonToBlobCommandHandler(BlobStorageService blobStorageService)
+        {
+            _blobStorageService = blobStorageService;
+        }
+
+        public async Task<string> Handle(UploadJsonToBlobCommand request, CancellationToken cancellationToken)
+        {
+            // Use the BlobStorageService to upload the JSON data to Blob Storage
+            return await _blobStorageService.UploadJsonToBlobAsync(request.players, request.BlobName);
+        }
+    }
+}
