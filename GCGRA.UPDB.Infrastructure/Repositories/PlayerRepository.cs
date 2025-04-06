@@ -1,25 +1,66 @@
-﻿using GCGRA.UPDB.Core.Entities;
+﻿using System.Numerics;
+using Azure;
+using Azure.Data.Tables;
+using GCGRA.UPDB.Core.Entities;
 using GCGRA.UPDB.Core.Interfaces;
 
 namespace GCGRA.UPDB.Infrastructure.Repositories
 {
     public class PlayerRepository : IPlayerRepository
     {
-        private readonly List<Player> _players = new()
+        private readonly TableClient _tableClient;
+
+        public PlayerRepository(string storageConnectionString, string tableName)
         {
-            new Player { Id = 1, Name = "Laptop", Price = 1200 },
-            new Player { Id = 2, Name = "Smartphone", Price = 800 }
-        };
+            var serviceClient = new TableServiceClient(storageConnectionString);
+            _tableClient = serviceClient.GetTableClient(tableName);
+            _tableClient.CreateIfNotExists();
+        }
 
         public async Task<IEnumerable<Player>> GetAllAsync()
         {
-            return await Task.FromResult(_players);
+            var players = new List<Player>();
+
+            await foreach (var entity in _tableClient.QueryAsync<TableEntity>())
+            {
+                var player = MapEntityToPlayer(entity);
+                players.Add(player);
+            }
+
+            return players;
         }
 
         public async Task<Player> GetByIdAsync(int id)
         {
-            var Player = _players.FirstOrDefault(p => p.Id == id);
-            return await Task.FromResult(Player);
+            try
+            {
+                var entity = await _tableClient.GetEntityAsync<TableEntity>(id.ToString(), id.ToString());
+                return MapEntityToPlayer(entity.Value);
+            }
+            catch (RequestFailedException)
+            {
+                return null;
+            }
+        }
+
+        private Player MapEntityToPlayer(TableEntity entity)
+        {
+            var player = new Player();
+            var playerType = typeof(Player);
+
+            foreach (var property in playerType.GetProperties())
+            {
+                if (entity.ContainsKey(property.Name))
+                {
+                    var value = entity[property.Name];
+                    if (value != null && property.CanWrite)
+                    {
+                        property.SetValue(player, Convert.ChangeType(value, property.PropertyType));
+                    }
+                }
+            }
+
+            return player;
         }
     }
 }

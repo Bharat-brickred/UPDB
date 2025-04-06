@@ -1,0 +1,13 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/GCGRA.UPDB.Infrastructure/obj/Debug/net9.0
+/GCGRA.UPDB.Infrastructure/obj
+/GCGRA.UPDB.Core/obj
+/GCGRA.UPDB.Application/obj
+/GCGRA.UPDB.API
+/.vs
+/GCGRA.UPDB.Core/bin
+/GCGRA.UPDB.Application/bin
+/GCGRA.UPDB.Infrastructure/bin

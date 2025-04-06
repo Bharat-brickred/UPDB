@@ -9,8 +9,8 @@ namespace GCGRA.UPDB.Application.Features.Blob.Commands
         public string BlobName { get; set; }
         public UploadJsonToBlobCommand(List<Player> players, string blobName)
         {
-            players = players;
-            BlobName = blobName;
+            this.players = players;
+            this.BlobName = blobName;
         }
     }
 }

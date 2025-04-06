@@ -1,14 +1,14 @@
 ﻿using GCGRA.UPDB.Application.Features.Blob.Commands;
-using GCGRA.UPDB.Infrastructure.Services;
+using GCGRA.UPDB.Core.Interfaces;
 using MediatR;
 
 namespace GCGRA.UPDB.Application.Features.Blob.Handlers
 {
     public class UploadJsonToBlobCommandHandler : IRequestHandler<UploadJsonToBlobCommand, string>
     {
-        private readonly BlobStorageService _blobStorageService;
+        private readonly IBlobStorageService _blobStorageService;
 
-        public UploadJsonToBlobCommandHandler(BlobStorageService blobStorageService)
+        public UploadJsonToBlobCommandHandler(IBlobStorageService blobStorageService)
         {
             _blobStorageService = blobStorageService;
         }
