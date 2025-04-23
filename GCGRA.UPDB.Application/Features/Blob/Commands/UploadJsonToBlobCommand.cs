@@ -5,11 +5,11 @@ namespace GCGRA.UPDB.Application.Features.Blob.Commands
 {
     public class UploadJsonToBlobCommand : IRequest<string>
     {
-        public List<Player> players { get; set; }
+        public List<Player> Players { get; set; }
         public string BlobName { get; set; }
-        public UploadJsonToBlobCommand(List<Player> players, string blobName)
+        public UploadJsonToBlobCommand(List<Player> Players, string blobName)
         {
-            this.players = players;
+            this.Players = Players;
             this.BlobName = blobName;
         }
     }

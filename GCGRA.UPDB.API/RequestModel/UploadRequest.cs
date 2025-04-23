@@ -4,7 +4,7 @@ namespace GCGRA.UPDB.API.RequestModel
 {
     public class UploadRequest
     {
-        public List<Player> players { get; set; }
+        public List<Player> Players { get; set; } = new List<Player>();
 
     }
 }

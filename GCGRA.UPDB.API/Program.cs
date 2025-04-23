@@ -1,16 +1,16 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using GCGRA.UPDB.API.RequestModel;
 using GCGRA.UPDB.Application.Features.Blob.Commands;
 using GCGRA.UPDB.Application.Features.Players.Queries;
 using GCGRA.UPDB.Core.Entities;
 using GCGRA.UPDB.Core.Interfaces;
+using GCGRA.UPDB.Infrastructure;
 using GCGRA.UPDB.Infrastructure.Repositories;
 using GCGRA.UPDB.Infrastructure.Services;
 using MediatR;
-using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection;
-
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,19 +18,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UploadJsonToBlobCommand).Assembly));
 
-// Azure Blob Storage service configuration
-// Add MediatR to the container
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UploadJsonToBlobCommand).Assembly));
+// Configure database client
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddSingleton(new DatabaseClient(connectionString));
 
-// Add services to the container.
-builder.Services.AddScoped<IPlayerRepository>(provider =>
-    new PlayerRepository(
-        builder.Configuration.GetValue<string>("AzureTableStorage:ConnectionString"),
-        builder.Configuration.GetValue<string>("AzureTableStorage:TableName")
-    )
-);
-
+// Add services to the container
+builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<IBlobStorageService>(provider =>
     new BlobStorageService(
         builder.Configuration.GetValue<string>("AzureBlobStorage:ConnectionString"),
@@ -46,16 +39,15 @@ builder.Services.AddApiVersioning(options =>
     options.ReportApiVersions = true;
 });
 
-
 // Add Swagger/OpenAPI 3.0 support
 builder.Services.AddEndpointsApiExplorer(); // Register the minimal API explorer
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Gaming Regulator API",
+        Title = "Player Account Information API",
         Version = "v1",
-        Description = "API documentation for the Gaming Regulator system."
+        Description = "API documentation for the Player Account Information"
     });
 
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -64,51 +56,46 @@ builder.Services.AddSwaggerGen(options =>
     // Optionally, you can customize how the request body looks in Swagger
     options.MapType<UploadRequest>(() => new OpenApiSchema { Type = "object" });
 });
+
 var app = builder.Build();
 
 app.UseSwagger(); // Enable middleware to serve generated Swagger as a JSON endpoint
 
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Gaming Regulator API");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Player Account Information API");
     c.RoutePrefix = string.Empty; // Swagger UI accessible at the root URL (http://localhost:5000)
 });
-// Configure the HTTP request pipeline.
-app.MapGet("/products", async (IMediator mediator) =>
-{
-    var query = new GetAllPlayersQuery();
-    var products = await mediator.Send(query);
-    return Results.Ok(products);
-});
 
-app.MapGet("/players/{doc-id}", async (int docIdn, IMediator mediator) =>
+app.MapGet("/api/v1/players/{id}", async (int id, IMediator mediator) =>
 {
-    var query = new GetPlayerByIdQuery(docIdn);
+    var query = new GetPlayerByIdQuery(id);
     var product = await mediator.Send(query);
-    return product is not null ? Results.Ok(product) : Results.NoContent();
+    return product is not null ? Results.Ok(product) : Results.NotFound();
 }).WithMetadata(new ApiVersionAttribute("1.0"))
 .WithMetadata(new EndpointSummaryAttribute("Retrieve Self-exclusion status of Players by Document ID"));
+
 // POST endpoint to store JSON data in Blob Storage
-app.MapPost("/players", async (UploadRequest request, IMediator mediator) =>
+app.MapPost("/api/v1/players", async (UploadRequest request, IMediator mediator) =>
 {
-    var validationResults = ValidatePlayers(request.players);
+    var validationResults = ValidatePlayers(request.Players);
 
     if (validationResults.Any())
     {
         return Results.BadRequest(validationResults);
     }
 
-    var blobName = $"players_{DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")}.json"; // Unique blob name
+    var blobName = $"players_{DateTime.UtcNow:yyyyMMddHHmmssfff}.json"; // Unique blob name
 
     // Create the UploadJsonToBlobCommand
-    var command = new UploadJsonToBlobCommand(request.players, blobName);
+    var command = new UploadJsonToBlobCommand(request.Players, blobName);
 
     // Send the command using MediatR
     var uploadedBlobUri = await mediator.Send(command);
 
-    return Results.Created("",new { Message = "Players created successfully", BlobUri = uploadedBlobUri });
+    return Results.Created("", new { Message = "Players created successfully", BlobUri = uploadedBlobUri });
 })
-    .WithMetadata(new ApiVersionAttribute("1.0"))
+.WithMetadata(new ApiVersionAttribute("1.0"))
 .WithMetadata(new EndpointSummaryAttribute("Add one or multiple players"));
 
 app.Run();

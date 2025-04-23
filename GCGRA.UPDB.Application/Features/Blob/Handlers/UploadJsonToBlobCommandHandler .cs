@@ -16,7 +16,7 @@ namespace GCGRA.UPDB.Application.Features.Blob.Handlers
         public async Task<string> Handle(UploadJsonToBlobCommand request, CancellationToken cancellationToken)
         {
             // Use the BlobStorageService to upload the JSON data to Blob Storage
-            return await _blobStorageService.UploadJsonToBlobAsync(request.players, request.BlobName);
+            return await _blobStorageService.UploadJsonToBlobAsync(request.Players, request.BlobName);
         }
     }
 }
